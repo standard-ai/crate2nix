@@ -645,9 +645,9 @@ impl RegistrySource {
     ///   https://static.crates.io/crates/{name}/{name}-{version}.crate
     ///
     /// For Cloudsmith registries we assume the index url has the form
-    ///   https://my-registry/path/to/index.git
+    ///   https://dl.cloudsmith.io/path/to/index.git
     /// And crate download URL has the form
-    ///   https://my-registry/path/to/{name}-{version}.crate
+    ///   https://dl.cloudsmith.io//path/to/{name}-{version}.crate
     ///
     /// Other custom registries are unsupported
     pub fn make_download_url(
