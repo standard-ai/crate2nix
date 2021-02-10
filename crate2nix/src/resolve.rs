@@ -639,16 +639,17 @@ impl RegistrySource {
         self.download_url.to_string()
     }
 
-    /// Construct a URL for fetching a crate artifact based on the URL of the
-    /// registry index.
+    /// Construct a URL for fetching a crate artifact
     ///
     /// For crates.io there is a known download URL we use:
     ///   https://static.crates.io/crates/{name}/{name}-{version}.crate
     ///
-    /// For custom registries we assume the index url has the form
+    /// For Cloudsmith registries we assume the index url has the form
     ///   https://my-registry/path/to/index.git
     /// And crate download URL has the form
     ///   https://my-registry/path/to/{name}-{version}.crate
+    ///
+    /// Other custom registries are unsupported
     pub fn make_download_url(
         name: String,
         version: String,
@@ -666,11 +667,16 @@ impl RegistrySource {
                 name = name,
                 version = version
             );
-        } else {
+        } else if index.starts_with(&format!(
+            "{}https://dl.cloudsmith.io/",
+            REGISTRY_SOURCE_PREFIX
+        )) {
             // Chop off the "registry+" prefix and "index.git" suffix
             download_url =
                 index[REGISTRY_SOURCE_PREFIX.len()..index.len() - "index.git".len()].to_string();
             download_url.push_str(format!("{}-{}.crate", name, version).as_str());
+        } else {
+            return Err(Error::msg(format!("Unsupported registry index {}", index)));
         }
         url::Url::parse(&download_url).map_err(Error::msg)
     }
