@@ -168,7 +168,7 @@ impl CrateDerivation {
             edition: package.edition.clone(),
             authors: package.authors.clone(),
             package_id: package.id.clone(),
-            version: package.version.clone(),
+            version: semver::Version::parse(package.version.to_string().as_str())?,
             source,
             features: package
                 .features
@@ -276,7 +276,7 @@ pub fn configured_source_is_used_instead_of_local_directory() {
     let root_package = &indexed.root_package().expect("root package");
 
     let mut crate2nix_json = crate::config::Config::default();
-    let source = crate::config::Source::CratesIo {
+    let source = crate::config::Source::Registry {
         name: "some_crate".to_string(),
         version: semver::Version::from_str("1.2.3").unwrap(),
         sha256: "123".to_string(),
@@ -290,7 +290,7 @@ pub fn configured_source_is_used_instead_of_local_directory() {
     assert!(crate_derivation.is_root_or_workspace_member);
     assert_eq!(
         crate_derivation.source,
-        ResolvedSource::CratesIo(CratesIoSource {
+        ResolvedSource::Registry(RegistrySource {
             name: "some_crate".to_string(),
             version: semver::Version::from_str("1.2.3").unwrap(),
             sha256: Some("123".to_string()),
@@ -362,7 +362,7 @@ impl BuildTarget {
 /// Specifies how to retrieve the source code.
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Hash)]
 pub enum ResolvedSource {
-    CratesIo(CratesIoSource),
+    Registry(RegistrySource),
     Git(GitSource),
     LocalDirectory(LocalDirectorySource),
     Nix(NixSource),
@@ -377,14 +377,22 @@ impl From<crate::config::Source> for ResolvedSource {
                 r#ref: None,
                 sha256: Some(sha256),
             }),
-            crate::config::Source::CratesIo {
+            crate::config::Source::Registry {
                 name,
                 version,
                 sha256,
-            } => ResolvedSource::CratesIo(CratesIoSource {
-                name,
-                version,
+                index,
+            } => ResolvedSource::Registry(RegistrySource {
+                name: name.clone(),
+                version: version.clone(),
                 sha256: Some(sha256),
+                index: index.clone(),
+                download_url: RegistrySource::make_download_url(
+                    name,
+                    version.to_string(),
+                    &index.to_string(),
+                )
+                .expect("Failed to generate a download URL"),
             }),
             crate::config::Source::Nix { file, attr } => {
                 ResolvedSource::Nix(NixSource { file, attr })
@@ -394,10 +402,14 @@ impl From<crate::config::Source> for ResolvedSource {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Hash)]
-pub struct CratesIoSource {
+pub struct RegistrySource {
     pub name: String,
     pub version: Version,
     pub sha256: Option<String>,
+    #[serde(with = "url_serde")]
+    pub index: url::Url,
+    #[serde(with = "url_serde")]
+    pub download_url: url::Url,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq, Hash)]
@@ -421,6 +433,7 @@ pub struct NixSource {
 }
 
 const GIT_SOURCE_PREFIX: &str = "git+";
+const REGISTRY_SOURCE_PREFIX: &str = "registry+";
 
 impl ResolvedSource {
     pub fn new(
@@ -429,12 +442,20 @@ impl ResolvedSource {
         package_path: impl AsRef<Path>,
     ) -> Result<ResolvedSource, Error> {
         match package.source.as_ref() {
-            Some(source) if source.is_crates_io() => {
+            Some(source) if source.repr.starts_with(REGISTRY_SOURCE_PREFIX) => {
+                let download_url = RegistrySource::make_download_url(
+                    package.name.clone(),
+                    package.version.to_string(),
+                    source.repr.as_str(),
+                )?;
+
                 // Will sha256 will be filled later by prefetch_and_fill_crates_sha256.
-                Ok(ResolvedSource::CratesIo(CratesIoSource {
+                Ok(ResolvedSource::Registry(RegistrySource {
                     name: package.name.clone(),
-                    version: package.version.clone(),
+                    version: semver::Version::parse(package.version.to_string().as_str())?,
                     sha256: None,
+                    index: url::Url::parse(source.repr.as_str())?,
+                    download_url: download_url,
                 }))
             }
             Some(source) => {
@@ -446,6 +467,8 @@ impl ResolvedSource {
         }
     }
 
+    /// If a package source does not point to crates.io it can be a git url,
+    /// local directory, or other custom registry
     fn git_or_local_directory(
         config: &GenerateConfig,
         package: &Package,
@@ -559,7 +582,7 @@ impl ResolvedSource {
 
     pub fn sha256(&self) -> Option<&String> {
         match self {
-            Self::CratesIo(CratesIoSource { sha256, .. }) | Self::Git(GitSource { sha256, .. }) => {
+            Self::Registry(RegistrySource { sha256, .. }) | Self::Git(GitSource { sha256, .. }) => {
                 sha256.as_ref()
             }
             _ => None,
@@ -568,7 +591,7 @@ impl ResolvedSource {
 
     pub fn with_sha256(&self, sha256: String) -> Self {
         match self {
-            Self::CratesIo(source) => Self::CratesIo(CratesIoSource {
+            Self::Registry(source) => Self::Registry(RegistrySource {
                 sha256: Some(sha256),
                 ..source.clone()
             }),
@@ -582,7 +605,7 @@ impl ResolvedSource {
 
     pub fn without_sha256(&self) -> Self {
         match self {
-            Self::CratesIo(source) => Self::CratesIo(CratesIoSource {
+            Self::Registry(source) => Self::Registry(RegistrySource {
                 sha256: None,
                 ..source.clone()
             }),
@@ -598,7 +621,7 @@ impl ResolvedSource {
 impl ToString for ResolvedSource {
     fn to_string(&self) -> String {
         match self {
-            Self::CratesIo(source) => source.to_string(),
+            Self::Registry(source) => source.to_string(),
             Self::Git(source) => source.to_string(),
             Self::LocalDirectory(source) => source.to_string(),
             Self::Nix(source) => source.to_string(),
@@ -606,7 +629,7 @@ impl ToString for ResolvedSource {
     }
 }
 
-impl CratesIoSource {
+impl RegistrySource {
     pub fn url(&self) -> String {
         // https://www.pietroalbini.org/blog/downloading-crates-io/
         // Not rate-limited, CDN URL.
@@ -616,9 +639,39 @@ impl CratesIoSource {
             version = self.version
         )
     }
+
+    /// Construct a URL for fetching a crate artifact based on the URL of the
+    /// registry index.
+    ///
+    /// For crates.io there is a known download URL we use:
+    ///   https://static.crates.io/crates/{name}/{name}-{version}.crate
+    ///
+    /// For custom registries we assume the index url has the form
+    ///   https://my-registry/path/to/index.git
+    /// And crate download URL has the form
+    ///   https://my-registry/path/to/{name}-{version}.crate
+    pub fn make_download_url(
+        name: String,
+        version: String,
+        index: &str,
+    ) -> Result<url::Url, Error> {
+        let mut download_url: String;
+        if index == "registry+https://github.com/rust-lang/crates.io-index" {
+            download_url = format!(
+                "https://static.crates.io/crates/{name}/{name}-{version}.crate",
+                name = name,
+                version = version
+            );
+        } else {
+            // Chop off the "registry+" prefix and "index.git" suffix
+            download_url = index[9..index.len() - 9].to_string();
+            download_url.push_str(format!("{}-{}.crate", name, version).as_str());
+        }
+        url::Url::parse(&download_url).map_err(Error::msg)
+    }
 }
 
-impl Display for CratesIoSource {
+impl Display for RegistrySource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.url())
     }

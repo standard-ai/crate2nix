@@ -44,8 +44,8 @@ rec {
                 rev = source.rev;
                 sha256 = source.sha256;
             }
-            else if type == "CratesIo"
-            then downloadFromCratesIo source
+            else if type == "Registry"
+            then downloadFromRegistry source
             else if type == "Nix"
             then resolveNix source
             else builtins.throw "Unexpected source type '${type}' for source: ${builtins.toJSON source}";
@@ -93,13 +93,12 @@ rec {
             in
             sourceDerivation;
 
-        downloadFromCratesIo = { type, name, version, sha256 }:
-            assert type == "CratesIo";
+        downloadFromRegistry = { type, name, version, sha256, url }:
+            assert type == "Registry";
 
             let archive = pkgs.fetchurl {
                 name = "${name}-${version}.tar.gz";
-                url = "https://crates.io/api/v1/crates/${name}/${version}/download";
-                inherit sha256;
+                inherit url sha256;
             };
             in pkgs.runCommand (lib.removeSuffix ".tar.gz" name) {}
             ''

@@ -4,7 +4,7 @@ use std::io::Write;
 use std::process::Command;
 
 use crate::metadata::PackageIdShortener;
-use crate::resolve::{CrateDerivation, CratesIoSource, GitSource, ResolvedSource};
+use crate::resolve::{CrateDerivation, GitSource, RegistrySource, ResolvedSource};
 use crate::GenerateConfig;
 use anyhow::bail;
 use anyhow::format_err;
@@ -205,7 +205,7 @@ pub trait PrefetchableSource: ToString {
 impl ResolvedSource {
     fn inner_prefetchable(&self) -> Option<&dyn PrefetchableSource> {
         match self {
-            ResolvedSource::CratesIo(source) => Some(source),
+            ResolvedSource::Registry(source) => Some(source),
             ResolvedSource::Git(source) => Some(source),
             _ => None,
         }
@@ -226,7 +226,7 @@ impl PrefetchableSource for ResolvedSource {
     }
 }
 
-impl PrefetchableSource for CratesIoSource {
+impl PrefetchableSource for RegistrySource {
     fn needs_prefetch(&self) -> bool {
         self.sha256.is_none()
     }

@@ -87,13 +87,16 @@ impl Config {
 #[serde(tag = "type")]
 pub enum Source {
     /// Get the source from crates.io.
-    CratesIo {
+    Registry {
         /// The crate name.
         name: String,
         /// The exact crate version to fetch.
         version: semver::Version,
         /// The sha256 hash of the source.
         sha256: String,
+        /// The URL of the crate hosted on the custom registry.
+        #[serde(with = "url_serde")]
+        index: url::Url,
     },
     /// Get the source from git.
     Git {
@@ -152,7 +155,7 @@ impl Source {
     /// The name of the source.
     pub fn name(&self) -> Option<&str> {
         match self {
-            Source::CratesIo { name, .. } => Some(name),
+            Source::Registry { name, .. } => Some(name),
             Source::Git { url, .. } => {
                 let path = url.path();
                 let after_last_slash = path.split('/').last().unwrap_or_else(|| path);
@@ -182,10 +185,11 @@ fn strip_suffix<'a>(s: &'a str, p: &str) -> &'a str {
 impl Display for Source {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Source::CratesIo {
+            Source::Registry {
                 name,
                 version,
                 sha256,
+                index: _,
             } => write!(f, "{} {} from crates.io: {}", name, version, sha256),
             Source::Git { url, rev, sha256 } => write!(f, "{}#{} via git: {}", url, rev, sha256),
             Source::Nix { file, attr: None } => write!(f, "{}", file),
@@ -201,7 +205,7 @@ impl Source {
     /// Returns a CLI string to reproduce this source.
     pub fn as_command(&self, name: &str) -> String {
         match self {
-            Source::CratesIo {
+            Source::Registry {
                 name: crate_name,
                 version,
                 ..

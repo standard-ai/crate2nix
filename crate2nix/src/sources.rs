@@ -3,7 +3,7 @@
 use crate::{
     config,
     prefetch::PrefetchableSource,
-    resolve::{CratesIoSource, GitSource},
+    resolve::{GitSource, RegistrySource},
 };
 use anyhow::{bail, format_err, Context, Error};
 use semver::Version;
@@ -16,20 +16,28 @@ use url::Url;
 
 /// Returns the completed Source::CratesIo definition by prefetching the hash.
 pub fn crates_io_source(name: String, version: Version) -> Result<config::Source, Error> {
-    let prefetchable = CratesIoSource {
+    let crates_io_url = url::Url::parse("registry+https://github.com/rust-lang/crates.io-index")?;
+    let prefetchable = RegistrySource {
         name: name.clone(),
         version: version.clone(),
         sha256: None,
+        index: crates_io_url.clone(),
+        download_url: RegistrySource::make_download_url(
+            name.clone(),
+            version.to_string(),
+            &crates_io_url.to_string(),
+        )?,
     };
 
     eprint!("Prefetching {}: ", prefetchable.to_string());
     let sha256 = prefetchable.prefetch()?;
     eprintln!("done.");
 
-    Ok(config::Source::CratesIo {
+    Ok(config::Source::Registry {
         name,
         version,
         sha256,
+        index: crates_io_url,
     })
 }
 

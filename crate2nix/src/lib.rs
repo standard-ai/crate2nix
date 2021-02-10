@@ -23,7 +23,7 @@ use serde::Serialize;
 use crate::metadata::IndexedMetadata;
 use crate::resolve::{CrateDerivation, ResolvedSource};
 use itertools::Itertools;
-use resolve::CratesIoSource;
+use resolve::RegistrySource;
 
 mod command;
 pub mod config;
@@ -161,7 +161,7 @@ fn cargo_metadata(config: &GenerateConfig, cargo_toml: &PathBuf) -> Result<Metad
     let mut cmd = cargo_metadata::MetadataCommand::new();
     let mut other_options = config.other_metadata_options.clone();
     other_options.push("--locked".into());
-    cmd.manifest_path(&cargo_toml).other_options(&other_options);
+    cmd.manifest_path(&cargo_toml).other_options(other_options);
     cmd.exec().map_err(|e| {
         format_err!(
             "while retrieving metadata about {}: {}",
@@ -247,7 +247,7 @@ fn extract_hashes_from_lockfile(
 
     let mut missing_hashes = Vec::new();
     for package in default_nix.crates.iter_mut().filter(|c| match &c.source {
-        ResolvedSource::CratesIo(CratesIoSource { sha256, .. }) if sha256.is_none() => {
+        ResolvedSource::Registry(RegistrySource { sha256, .. }) if sha256.is_none() => {
             !hashes_with_shortened_ids.contains_key(&c.package_id)
         }
         _ => false,
