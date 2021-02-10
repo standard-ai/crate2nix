@@ -323,12 +323,12 @@ rec {
           }
           {
             name = "semver";
-            packageId = "semver 0.11.0";
+            packageId = "semver";
             features = [ "serde" ];
           }
           {
             name = "semver-parser";
-            packageId = "semver-parser 0.10.2";
+            packageId = "semver-parser";
           }
           {
             name = "serde";
@@ -481,7 +481,7 @@ rec {
           }
           {
             name = "semver";
-            packageId = "semver 0.9.0";
+            packageId = "semver";
             features = [ "serde" ];
           }
           {
@@ -1530,7 +1530,7 @@ rec {
         ];
         
       };
-      "semver 0.11.0" = rec {
+      "semver" = rec {
         crateName = "semver";
         version = "0.11.0";
         edition = "2015";
@@ -1543,7 +1543,7 @@ rec {
         dependencies = [
           {
             name = "semver-parser";
-            packageId = "semver-parser 0.10.2";
+            packageId = "semver-parser";
           }
           {
             name = "serde";
@@ -1556,33 +1556,7 @@ rec {
         };
         resolvedDefaultFeatures = [ "default" "serde" ];
       };
-      "semver 0.9.0" = rec {
-        crateName = "semver";
-        version = "0.9.0";
-        edition = "2015";
-        sha256 = "00q4lkcj0rrgbhviv9sd4p6qmdsipkwkbra7rh11jrhq5kpvjzhx";
-        downloadUrl = "https://static.crates.io/crates/semver/semver-0.9.0.crate";
-        authors = [
-          "Steve Klabnik <steve@steveklabnik.com>"
-          "The Rust Project Developers"
-        ];
-        dependencies = [
-          {
-            name = "semver-parser";
-            packageId = "semver-parser 0.7.0";
-          }
-          {
-            name = "serde";
-            packageId = "serde";
-            optional = true;
-          }
-        ];
-        features = {
-          "ci" = [ "serde" ];
-        };
-        resolvedDefaultFeatures = [ "default" "serde" ];
-      };
-      "semver-parser 0.10.2" = rec {
+      "semver-parser" = rec {
         crateName = "semver-parser";
         version = "0.10.2";
         edition = "2018";
@@ -1597,17 +1571,6 @@ rec {
             name = "pest";
             packageId = "pest";
           }
-        ];
-        
-      };
-      "semver-parser 0.7.0" = rec {
-        crateName = "semver-parser";
-        version = "0.7.0";
-        edition = "2015";
-        sha256 = "18vhypw6zgccnrlm5ps1pwa0khz7ry927iznpr88b87cagr1v2iq";
-        downloadUrl = "https://static.crates.io/crates/semver-parser/semver-parser-0.7.0.crate";
-        authors = [
-          "Steve Klabnik <steve@steveklabnik.com>"
         ];
         
       };
