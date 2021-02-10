@@ -280,7 +280,11 @@ pub fn configured_source_is_used_instead_of_local_directory() {
         name: "some_crate".to_string(),
         version: semver::Version::from_str("1.2.3").unwrap(),
         sha256: "123".to_string(),
-        index: url::Url::parse("registry+https://github.com/rust-lang/crates.io-index").unwrap(),
+        index: url::Url::parse(&format!(
+            "{}https://github.com/rust-lang/crates.io-index",
+            REGISTRY_SOURCE_PREFIX
+        ))
+        .unwrap(),
     };
     crate2nix_json.upsert_source(None, source.clone());
     let crate_derivation =
@@ -295,8 +299,11 @@ pub fn configured_source_is_used_instead_of_local_directory() {
             name: "some_crate".to_string(),
             version: semver::Version::from_str("1.2.3").unwrap(),
             sha256: Some("123".to_string()),
-            index: url::Url::parse("registry+https://github.com/rust-lang/crates.io-index")
-                .unwrap(),
+            index: url::Url::parse(&format!(
+                "{}https://github.com/rust-lang/crates.io-index",
+                REGISTRY_SOURCE_PREFIX
+            ))
+            .unwrap(),
             download_url: url::Url::parse(
                 "https://static.crates.io/crates/some_crate/some_crate-1.2.3.crate"
             )
@@ -663,7 +670,12 @@ impl RegistrySource {
         index: &str,
     ) -> Result<url::Url, Error> {
         let mut download_url: String;
-        if index == "registry+https://github.com/rust-lang/crates.io-index" {
+        if index
+            == format!(
+                "{}https://github.com/rust-lang/crates.io-index",
+                REGISTRY_SOURCE_PREFIX
+            )
+        {
             download_url = format!(
                 "https://static.crates.io/crates/{name}/{name}-{version}.crate",
                 name = name,
@@ -671,7 +683,8 @@ impl RegistrySource {
             );
         } else {
             // Chop off the "registry+" prefix and "index.git" suffix
-            download_url = index[9..index.len() - 9].to_string();
+            download_url =
+                index[REGISTRY_SOURCE_PREFIX.len()..index.len() - "index.git".len()].to_string();
             download_url.push_str(format!("{}-{}.crate", name, version).as_str());
         }
         url::Url::parse(&download_url).map_err(Error::msg)

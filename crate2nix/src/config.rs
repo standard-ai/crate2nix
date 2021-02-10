@@ -86,7 +86,7 @@ impl Config {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type")]
 pub enum Source {
-    /// Get the source from crates.io.
+    /// Get the source from a cargo registry
     Registry {
         /// The crate name.
         name: String,
