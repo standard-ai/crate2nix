@@ -1,5 +1,5 @@
 ///! Constructor functions for test data.
-use cargo_metadata::{Dependency, Metadata, Node, NodeDep, Package, PackageId, Resolve};
+use cargo_metadata::{Dependency, Metadata, Node, NodeDep, Package, PackageId, Resolve, Version};
 use std::path::PathBuf;
 use tempdir::TempDir;
 
@@ -129,7 +129,7 @@ impl<'a> PackageAndNode<'a> {
     }
     pub fn version_and_package_id(&mut self, version: &str) -> &mut Self {
         let p = self.get_mut_package();
-        p.version = semver::Version::parse(version).expect("version incorrect");
+        p.version = Version::parse(version).expect("version incorrect");
         p.id = crates_io_package_id(&p.name, version);
         self
     }

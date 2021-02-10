@@ -280,6 +280,7 @@ pub fn configured_source_is_used_instead_of_local_directory() {
         name: "some_crate".to_string(),
         version: semver::Version::from_str("1.2.3").unwrap(),
         sha256: "123".to_string(),
+        index: url::Url::parse("registry+https://github.com/rust-lang/crates.io-index").unwrap(),
     };
     crate2nix_json.upsert_source(None, source.clone());
     let crate_derivation =
@@ -294,6 +295,12 @@ pub fn configured_source_is_used_instead_of_local_directory() {
             name: "some_crate".to_string(),
             version: semver::Version::from_str("1.2.3").unwrap(),
             sha256: Some("123".to_string()),
+            index: url::Url::parse("registry+https://github.com/rust-lang/crates.io-index")
+                .unwrap(),
+            download_url: url::Url::parse(
+                "https://static.crates.io/crates/some_crate/some_crate-1.2.3.crate"
+            )
+            .unwrap()
         })
     );
 
