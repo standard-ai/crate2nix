@@ -299,11 +299,6 @@ pub fn configured_source_is_used_instead_of_local_directory() {
             name: "some_crate".to_string(),
             version: semver::Version::from_str("1.2.3").unwrap(),
             sha256: Some("123".to_string()),
-            index: url::Url::parse(&format!(
-                "{}https://github.com/rust-lang/crates.io-index",
-                REGISTRY_SOURCE_PREFIX
-            ))
-            .unwrap(),
             download_url: url::Url::parse(
                 "https://static.crates.io/crates/some_crate/some_crate-1.2.3.crate"
             )
@@ -400,7 +395,6 @@ impl From<crate::config::Source> for ResolvedSource {
                 name: name.clone(),
                 version: version.clone(),
                 sha256: Some(sha256),
-                index: index.clone(),
                 download_url: RegistrySource::make_download_url(
                     name,
                     version.to_string(),
@@ -420,8 +414,6 @@ pub struct RegistrySource {
     pub name: String,
     pub version: Version,
     pub sha256: Option<String>,
-    #[serde(with = "url_serde")]
-    pub index: url::Url,
     #[serde(with = "url_serde")]
     pub download_url: url::Url,
 }
@@ -468,7 +460,6 @@ impl ResolvedSource {
                     name: package.name.clone(),
                     version: semver::Version::parse(package.version.to_string().as_str())?,
                     sha256: None,
-                    index: url::Url::parse(source.repr.as_str())?,
                     download_url: download_url,
                 }))
             }
@@ -645,13 +636,7 @@ impl ToString for ResolvedSource {
 
 impl RegistrySource {
     pub fn url(&self) -> String {
-        // https://www.pietroalbini.org/blog/downloading-crates-io/
-        // Not rate-limited, CDN URL.
-        format!(
-            "https://static.crates.io/crates/{name}/{name}-{version}.crate",
-            name = self.name,
-            version = self.version
-        )
+        self.download_url.to_string()
     }
 
     /// Construct a URL for fetching a crate artifact based on the URL of the

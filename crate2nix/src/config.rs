@@ -94,7 +94,7 @@ pub enum Source {
         version: semver::Version,
         /// The sha256 hash of the source.
         sha256: String,
-        /// The URL of the crate hosted on the custom registry.
+        /// The URL of the registry index
         #[serde(with = "url_serde")]
         index: url::Url,
     },
@@ -190,7 +190,7 @@ impl Display for Source {
                 version,
                 sha256,
                 index: _,
-            } => write!(f, "{} {} from crates.io: {}", name, version, sha256),
+            } => write!(f, "{} {} from registry: {}", name, version, sha256),
             Source::Git { url, rev, sha256 } => write!(f, "{}#{} via git: {}", url, rev, sha256),
             Source::Nix { file, attr: None } => write!(f, "{}", file),
             Source::Nix {
@@ -228,7 +228,7 @@ impl Source {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum SourceType {
     /// Corresponds to Source::CratesIo.
-    CratesIo,
+    Registry,
     /// Corresponds to Source::Git.
     Git,
 }
@@ -237,7 +237,7 @@ impl FromStr for SourceType {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "cratesIo" => Ok(SourceType::CratesIo),
+            "registry" => Ok(SourceType::Registry),
             "git" => Ok(SourceType::Git),
             _ => bail!("unkown source type: {}", s),
         }

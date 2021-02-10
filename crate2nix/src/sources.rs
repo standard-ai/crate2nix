@@ -14,14 +14,13 @@ use std::{
 use std::{fs::File, io::BufRead, process::Command, time::SystemTime};
 use url::Url;
 
-/// Returns the completed Source::CratesIo definition by prefetching the hash.
+/// Returns the completed Source::Registry definition for a CratesIo crate by prefetching the hash.
 pub fn crates_io_source(name: String, version: Version) -> Result<config::Source, Error> {
     let crates_io_url = url::Url::parse("registry+https://github.com/rust-lang/crates.io-index")?;
     let prefetchable = RegistrySource {
         name: name.clone(),
         version: version.clone(),
         sha256: None,
-        index: crates_io_url.clone(),
         download_url: RegistrySource::make_download_url(
             name.clone(),
             version.to_string(),
