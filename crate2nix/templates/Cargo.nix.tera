@@ -105,8 +105,9 @@ rec {
         ];
         {%- endif -%}
 
-        {%- if crate.source.CratesIo.sha256 %}
-        sha256 = {{crate.source.CratesIo.sha256}};
+        {%- if crate.source.Registry.sha256 %}
+        sha256 = {{crate.source.Registry.sha256}};
+        downloadUrl = {{crate.source.Registry.download_url}};
         {%- elif crate.source.Nix.file.import and crate.source.Nix.attr %}
         src = (import {{crate.source.Nix.file.import | safe}}).{{crate.source.Nix.attr | safe}};
         {%- elif crate.source.Nix.file.package and crate.source.Nix.attr %}

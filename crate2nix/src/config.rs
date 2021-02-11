@@ -86,14 +86,17 @@ impl Config {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type")]
 pub enum Source {
-    /// Get the source from crates.io.
-    CratesIo {
+    /// Get the source from a cargo registry
+    Registry {
         /// The crate name.
         name: String,
         /// The exact crate version to fetch.
         version: semver::Version,
         /// The sha256 hash of the source.
         sha256: String,
+        /// The URL of the registry index
+        #[serde(with = "url_serde")]
+        index: url::Url,
     },
     /// Get the source from git.
     Git {
@@ -152,7 +155,7 @@ impl Source {
     /// The name of the source.
     pub fn name(&self) -> Option<&str> {
         match self {
-            Source::CratesIo { name, .. } => Some(name),
+            Source::Registry { name, .. } => Some(name),
             Source::Git { url, .. } => {
                 let path = url.path();
                 let after_last_slash = path.split('/').last().unwrap_or_else(|| path);
@@ -182,11 +185,12 @@ fn strip_suffix<'a>(s: &'a str, p: &str) -> &'a str {
 impl Display for Source {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Source::CratesIo {
+            Source::Registry {
                 name,
                 version,
                 sha256,
-            } => write!(f, "{} {} from crates.io: {}", name, version, sha256),
+                index: _,
+            } => write!(f, "{} {} from registry: {}", name, version, sha256),
             Source::Git { url, rev, sha256 } => write!(f, "{}#{} via git: {}", url, rev, sha256),
             Source::Nix { file, attr: None } => write!(f, "{}", file),
             Source::Nix {
@@ -201,7 +205,7 @@ impl Source {
     /// Returns a CLI string to reproduce this source.
     pub fn as_command(&self, name: &str) -> String {
         match self {
-            Source::CratesIo {
+            Source::Registry {
                 name: crate_name,
                 version,
                 ..
@@ -224,7 +228,7 @@ impl Source {
 #[derive(Debug, Serialize, Deserialize)]
 pub enum SourceType {
     /// Corresponds to Source::CratesIo.
-    CratesIo,
+    Registry,
     /// Corresponds to Source::Git.
     Git,
 }
@@ -233,7 +237,7 @@ impl FromStr for SourceType {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "cratesIo" => Ok(SourceType::CratesIo),
+            "registry" => Ok(SourceType::Registry),
             "git" => Ok(SourceType::Git),
             _ => bail!("unkown source type: {}", s),
         }
