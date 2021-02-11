@@ -649,7 +649,10 @@ impl RegistrySource {
     /// And crate download URL has the form
     ///   https://dl.cloudsmith.io/path/to/{name}-{version}.crate
     ///
-    /// Other custom registries are unsupported
+    /// Other custom registries are unsupported.
+    ///
+    /// TODO: Add general registry support by parsing the config.json file:
+    /// https://doc.rust-lang.org/cargo/reference/registries.html#index-format
     pub fn make_download_url(
         name: String,
         version: String,
